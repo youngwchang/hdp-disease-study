@@ -93,7 +93,7 @@ ${hira.formatForPrompt(hiraData)}
 [추정치 차이 원인 및 데이터 한계]
 ===END_SECTION5===`;
 
-  const response = await callClaude(SYSTEM, userPrompt, true, 6000);
+  const response = await callClaude(SYSTEM, userPrompt, true, 10000);
   return parseSection(response);
 }
 
