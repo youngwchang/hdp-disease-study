@@ -163,13 +163,19 @@ async function markdownToDocx(markdown, title = '질환 정보 분석 리포트'
 }
 
 function parseMarkdownTable(lines) {
-  // 구분선(---)만 있는 행 제거
-  const dataLines = lines.filter(l => !/^\|[-:| ]+\|$/.test(l.trim()));
+  // 구분선(---)만 있는 행 제거 — 끝에 | 가 없는 형태도 걸러낸다
+  const dataLines = lines.filter(l => !/^\|?[-:| ]+\|?$/.test(l.trim()));
   if (dataLines.length < 1) return null;
 
-  const rows = dataLines.map(line => {
-    return line.split('|').filter((_, idx, arr) => idx > 0 && idx < arr.length - 1).map(c => c.trim());
-  });
+  // 앞뒤 파이프를 떼어낸 뒤 분리한다. 예전 방식(첫·끝 인덱스 버리기)은
+  // 행이 | 로 끝나지 않으면 마지막 셀을 통째로 잃었다.
+  let rows = dataLines.map(line =>
+    line.trim().replace(/^\|/, '').replace(/\|\s*$/, '').split('|').map(c => c.trim())
+  );
+
+  // 행마다 셀 개수가 다르면 Word 표가 어긋난다. 최대 열 수에 맞춰 채운다.
+  const width = Math.max(...rows.map(r => r.length));
+  rows = rows.map(r => (r.length === width ? r : [...r, ...Array(width - r.length).fill('')]));
 
   const isHeader = (rowIdx) => rowIdx === 0;
 
