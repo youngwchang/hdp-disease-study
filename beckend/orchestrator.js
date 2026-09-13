@@ -51,14 +51,15 @@ async function run(jobId, rawDisease, iqviaData, emit) {
   // ── STEP 3: 통합 + 섹션 10 작성 ─────────────────────
   emit({ step: 3, message: '리포트 통합 및 전략적 시사점 작성 중...' });
 
-  const combinedSections = [
-    clinicalResult.sections,
-    epi,
-    market,
-    pipeline,
-  ].join('\n\n---\n\n');
+  const blocks = [
+    { label: '섹션 1~4 임상',        text: clinicalResult.sections, budget: 7000 },
+    { label: '섹션 5 역학',          text: epi,                     budget: 5000 },
+    { label: '섹션 6 시장',          text: market,                  budget: 5000 },
+    { label: '섹션 7~9 파이프라인',   text: pipeline,                budget: 8000 },
+  ];
+  const combinedSections = blocks.map(b => b.text).join('\n\n---\n\n');
 
-  const section10 = await writeStrategicInsights(combinedSections, context);
+  const section10 = await writeStrategicInsights(blocks, context);
 
   emit({ step: 3, message: '섹션 10(전략적 시사점) 완료 ✓' });
 
@@ -120,14 +121,31 @@ async function normalizeDisease(rawDisease) {
 }
 
 /** 섹션 10 — 전략적 시사점 */
-async function writeStrategicInsights(allSections, context) {
+/**
+ * 섹션별로 예산을 나눠 요약 입력을 만든다.
+ *
+ * 예전에는 전체를 이어붙인 뒤 substring(0, 12000) 으로 잘랐다. 그러면 앞쪽
+ * 임상 섹션이 예산을 다 쓰고 시장·파이프라인이 통째로 사라진다. 정작 섹션 10 이
+ * 요구하는 "경쟁 강도(파이프라인 기반)", "국내 기회(시장 기반)" 의 근거가
+ * 입력에 없는 상태로 작성되던 셈이다.
+ */
+function buildDigest(blocks) {
+  return blocks.map(({ label, text, budget }) => {
+    const body = (text || '').trim();
+    if (!body) return `### [${label}] 내용 없음`;
+    if (body.length <= budget) return body;
+    return `${body.slice(0, budget)}\n\n> (${label}: 분량 초과로 이하 생략 — 원문 ${body.length.toLocaleString()}자 중 ${budget.toLocaleString()}자 발췌)`;
+  }).join('\n\n---\n\n');
+}
+
+async function writeStrategicInsights(blocks, context) {
   const system = `당신은 제약사 BD팀 전략 분석가입니다.
 전체 리포트 내용을 종합하여 핵심 전략적 시사점을 한국어로 작성합니다.
 BD 담당자가 의사결정에 바로 활용할 수 있는 수준으로 작성하세요.`;
 
   const prompt = `아래는 ${context.disease_name_ko} (${context.disease_name_en}) 분석 리포트의 전체 내용입니다.
 
-${allSections.substring(0, 12000)}
+${buildDigest(blocks)}
 
 ## 작성 지침
 전체 내용을 종합하여 아래 5개 항목의 전략적 시사점을 작성하세요.
