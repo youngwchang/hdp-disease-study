@@ -12,7 +12,13 @@ const SYSTEM = `당신은 제약사 BD팀의 전문 역학 리서처입니다.
 async function run(context, emit) {
   emit('Epidemiology Agent: HIRA + PubMed 검색 중...');
 
-  const { disease_name_ko: ko, disease_name_en: en, icd_code: icd, synonyms, search_keywords } = context;
+  const {
+    disease_name_ko: ko,
+    disease_name_en: en,
+    icd_code: icd = 'Unknown',
+    synonyms = [],
+    search_keywords,
+  } = context;
   const enKeywords = search_keywords?.en || [en];
 
   const [epiPapers, burdenPapers, hiraData] = await Promise.all([
