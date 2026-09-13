@@ -147,16 +147,20 @@ function parseClinicalResponse(text, diseaseInfo) {
   const sectionsMatch = text.match(/===SECTIONS===([\s\S]*?)===END_SECTIONS===/);
   if (sectionsMatch) sections = sectionsMatch[1].trim();
 
+  const defaults = buildDefaultContext(diseaseInfo);
   const contextMatch = text.match(/===CONTEXT===([\s\S]*?)===END_CONTEXT===/);
   if (contextMatch) {
     try {
       const raw = contextMatch[1].trim().replace(/```json|```/g, '').trim();
-      context = JSON.parse(raw);
+      const parsed = JSON.parse(raw);
+      // 파싱에 성공해도 모델이 키를 빠뜨릴 수 있다. 기본값 위에 덮어써서
+      // 하위 에이전트가 undefined 를 만나지 않게 한다.
+      context = normalizeContext({ ...defaults, ...parsed }, defaults);
     } catch {
-      context = buildDefaultContext(diseaseInfo);
+      context = defaults;
     }
   } else {
-    context = buildDefaultContext(diseaseInfo);
+    context = defaults;
   }
 
   // sections가 비어있으면 전체 텍스트에서 ## 1. 부터 추출
@@ -168,16 +172,37 @@ function parseClinicalResponse(text, diseaseInfo) {
   return { sections, context };
 }
 
+/** 배열/문자열 필드가 기대한 타입인지 보정 */
+function normalizeContext(ctx, defaults) {
+  const arr = (v, fb) => (Array.isArray(v) ? v.filter(x => typeof x === 'string' && x.trim()) : fb);
+  const str = (v, fb) => (typeof v === 'string' && v.trim() ? v : fb);
+  return {
+    ...ctx,
+    disease_name_ko: str(ctx.disease_name_ko, defaults.disease_name_ko),
+    disease_name_en: str(ctx.disease_name_en, defaults.disease_name_en),
+    icd_code:        str(ctx.icd_code, defaults.icd_code),
+    category:        str(ctx.category, ''),
+    synonyms:        arr(ctx.synonyms, defaults.synonyms),
+    key_targets:     arr(ctx.key_targets, []),
+    approved_drugs:  arr(ctx.approved_drugs, []),
+    search_keywords: {
+      en: arr(ctx.search_keywords?.en, defaults.search_keywords.en),
+      ko: arr(ctx.search_keywords?.ko, defaults.search_keywords.ko),
+    },
+  };
+}
+
 function buildDefaultContext({ ko, en, icd, synonyms }) {
+  const syn = Array.isArray(synonyms) ? synonyms : [];
   return {
     disease_name_ko: ko,
     disease_name_en: en,
-    synonyms,
+    synonyms: syn,
     icd_code: icd,
     category: '',
     key_targets: [],
     approved_drugs: [],
-    search_keywords: { en: [en, ...synonyms].slice(0, 4), ko: [ko] },
+    search_keywords: { en: [en, ...syn].slice(0, 4), ko: [ko] },
   };
 }
 
