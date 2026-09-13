@@ -2,6 +2,15 @@ const axios = require('axios');
 
 const CT_BASE = 'https://clinicaltrials.gov/api/v2/studies';
 
+// ClinicalTrials.gov v2 aggFilters 의 phase 코드
+const PHASE_CODE = {
+  EARLY_PHASE1: '0',
+  PHASE1: '1',
+  PHASE2: '2',
+  PHASE3: '3',
+  PHASE4: '4',
+};
+
 /**
  * ClinicalTrials.gov 임상시험 검색
  * @param {string} condition - 질환명
@@ -18,14 +27,23 @@ async function search(condition, phases = [], statuses = [], maxResults = 30) {
       fields: 'NCTId,BriefTitle,OfficialTitle,LeadSponsorName,Phase,OverallStatus,PrimaryOutcomeMeasure,CompletionDate,EnrollmentCount,InterventionName,InterventionType',
     };
 
-    if (phases.length > 0) params['filter.phase'] = phases.join(',');
+    // v2 API 에는 filter.phase 가 없다. 지정하면 400 이 떨어지고 catch 가
+    // 이를 삼켜 조용히 빈 배열이 반환된다. 단계 필터는 aggFilters 로 건다.
+    //   aggFilters=phase:2 3   (공백으로 여러 단계 나열)
+    if (phases.length > 0) {
+      const nums = phases
+        .map(p => PHASE_CODE[String(p).toUpperCase()])
+        .filter(v => v !== undefined);
+      if (nums.length > 0) params.aggFilters = `phase:${[...new Set(nums)].join(' ')}`;
+    }
     if (statuses.length > 0) params['filter.overallStatus'] = statuses.join(',');
 
     const resp = await axios.get(CT_BASE, { params, timeout: 20000 });
     const studies = resp.data?.studies || [];
     return studies.map(parseStudy);
   } catch (err) {
-    console.warn(`[ClinicalTrials] 검색 실패 (${condition}):`, err.message);
+    const detail = err.response?.data ? ` — ${String(err.response.data).slice(0, 200)}` : '';
+    console.warn(`[ClinicalTrials] 검색 실패 (${condition}):`, err.message + detail);
     return [];
   }
 }
