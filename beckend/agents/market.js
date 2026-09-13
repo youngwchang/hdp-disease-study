@@ -62,7 +62,7 @@ ${iqviaSection}
 - [요인 서술]
 ===END_SECTION6===`;
 
-  const response = await callClaude(SYSTEM, userPrompt, true, 6000);
+  const response = await callClaude(SYSTEM, userPrompt, true, 10000);
   return parseSection(response);
 }
 
