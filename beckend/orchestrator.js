@@ -174,7 +174,7 @@ ${buildDigest(blocks)}
 
   // 3000 으로는 10-1~10-5 를 표까지 포함해 쓰기에 부족하다. 실제로 10-4·10-5 가
   // 통째로 잘려 나갔다. 한국어는 토큰이 촘촘해 같은 분량도 토큰을 더 먹는다.
-  const response = await callClaude(system, prompt, false, 8000);
+  const response = await callClaude(system, prompt, false, 12000);
   const match = response.match(/===SECTION10===([\s\S]*?)===END_SECTION10===/);
   let out = match ? match[1].trim() : response.trim();
 
