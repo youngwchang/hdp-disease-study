@@ -172,9 +172,18 @@ ${buildDigest(blocks)}
 - [리스크 3]: [설명]
 ===END_SECTION10===`;
 
-  const response = await callClaude(system, prompt, false, 3000);
+  // 3000 으로는 10-1~10-5 를 표까지 포함해 쓰기에 부족하다. 실제로 10-4·10-5 가
+  // 통째로 잘려 나갔다. 한국어는 토큰이 촘촘해 같은 분량도 토큰을 더 먹는다.
+  const response = await callClaude(system, prompt, false, 8000);
   const match = response.match(/===SECTION10===([\s\S]*?)===END_SECTION10===/);
-  return match ? match[1].trim() : response.trim();
+  let out = match ? match[1].trim() : response.trim();
+
+  // 종료 구분자가 없으면 응답이 중간에 끊긴 것이다. 조용히 넘기지 않는다.
+  if (!match && !/10-5/.test(out)) {
+    console.warn('[Orchestrator] 섹션 10 응답이 불완전합니다 (종료 구분자 없음)');
+    out += '\n\n> ⚠️ 이 섹션은 생성 도중 중단되었습니다. 일부 항목(10-4·10-5)이 누락되었을 수 있습니다.';
+  }
+  return out;
 }
 
 module.exports = { run };
