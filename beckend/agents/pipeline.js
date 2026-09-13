@@ -114,7 +114,9 @@ ${pubmed.formatForPrompt(recentPapers, '최근허가')}
 [국내 개발사 파이프라인 또는 "국내 개발사 파이프라인 미확인"]
 ===END_SECTION789===`;
 
-  const response = await callClaude(SYSTEM, userPrompt, true, 8000);
+  // 섹션 7·8·9 를 한 번에 쓰는 가장 무거운 호출. 8000 에서 개발사 프로파일이
+  // 문장 중간에 잘렸다. max_tokens 는 상한일 뿐 쓰지 않은 만큼은 과금되지 않는다.
+  const response = await callClaude(SYSTEM, userPrompt, true, 16000);
   return parseSection(response);
 }
 
