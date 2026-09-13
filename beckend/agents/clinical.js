@@ -136,7 +136,8 @@ ${pubmed.formatForPrompt(drugPapers, '약제')}
 }
 ===END_CONTEXT===`;
 
-  const response = await callClaude(SYSTEM, userPrompt, true, 10000);
+  // 섹션 1~4 + CONTEXT JSON 을 한 번에 쓴다. 측정 결과 10000 은 빠듯했다.
+  const response = await callClaude(SYSTEM, userPrompt, true, 16000);
   return parseClinicalResponse(response, diseaseInfo);
 }
 
